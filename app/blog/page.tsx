@@ -8,17 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Calendar, Clock, ArrowRight, Search, Filter, User } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { apiClient, BlogPost, Category } from "@/lib/api"
+import { apiClient, BlogPost, Category } from "@/lib/supabase-api"
 
 // Helper function to get the correct image URL
 const getImageUrl = (post: BlogPost): string | null => {
-  if (post.featured_image) {
-    if (post.featured_image.startsWith('/')) {
-      return `http://localhost:8000${post.featured_image}`
+  if (post.featured_image_url) {
+    if (post.featured_image_url.startsWith('/')) {
+      return `http://localhost:8000${post.featured_image_url}`
     }
-    return post.featured_image
+    return post.featured_image_url
   }
-  return post.featured_image_url || null
+  return null
 }
 
 // Helper function to format date

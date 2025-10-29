@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, ArrowLeft, User, Tag } from "lucide-react"
-import { apiClient, BlogPost } from "@/lib/api"
+import { apiClient, BlogPost } from "@/lib/supabase-api"
 
 export default function BlogPostPage() {
   const [post, setPost] = useState<BlogPost | null>(null)
@@ -37,13 +37,13 @@ export default function BlogPostPage() {
 
   // Helper function to get the correct image URL
   const getImageUrl = (post: BlogPost): string | null => {
-    if (post.featured_image) {
-      if (post.featured_image.startsWith('/')) {
-        return `http://localhost:8000${post.featured_image}`
+    if (post.featured_image_url) {
+      if (post.featured_image_url.startsWith('/')) {
+        return `http://localhost:8000${post.featured_image_url}`
       }
-      return post.featured_image
+      return post.featured_image_url
     }
-    return post.featured_image_url || null
+    return null
   }
 
   if (loading) {

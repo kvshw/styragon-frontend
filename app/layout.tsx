@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${cinzel.variable} ${cormorantGaramond.variable} font-sans antialiased`}>
+      <body className={`${cinzel.variable} ${cormorantGaramond.variable} font-sans antialiased`} suppressHydrationWarning>
         {children}
         <Analytics />
       </body>

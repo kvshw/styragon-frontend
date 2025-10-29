@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+import { supabase } from './supabase'
 
 export interface BlogPost {
   id: number
@@ -97,33 +97,48 @@ export interface Author {
 }
 
 class ApiClient {
-  private baseUrl: string
-
-  constructor(baseUrl: string = API_BASE_URL) {
-    this.baseUrl = baseUrl
-  }
-
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`
-    
+  // Blog Posts
+  async getBlogPosts(params?: {
+    search?: string
+    category?: string
+    featured?: boolean
+    published?: boolean
+    ordering?: string
+    page?: number
+  }): Promise<{ results: BlogPost[]; count: number; next?: string; previous?: string }> {
     try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        ...options,
-      })
+      let query = supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          author:authors(*),
+          category:categories(*)
+        `)
 
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+      if (params?.published !== undefined) {
+        query = query.eq('published', params.published)
+      }
+      if (params?.featured !== undefined) {
+        query = query.eq('featured', params.featured)
+      }
+      if (params?.search) {
+        query = query.or(`title.ilike.%${params.search}%,content.ilike.%${params.search}%`)
+      }
+      if (params?.category) {
+        query = query.eq('category.slug', params.category)
       }
 
-      return response.json()
+      const { data, error } = await query.order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return {
+        results: data || [],
+        count: data?.length || 0
+      }
     } catch (error) {
-      console.warn(`API request failed for ${endpoint}:`, error)
-      // Return empty data structure for graceful fallback
-      return { results: [], count: 0 } as T
+      console.warn('Error fetching blog posts:', error)
+      return { results: [], count: 0 }
     }
   }
 

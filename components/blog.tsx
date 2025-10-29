@@ -5,20 +5,20 @@ import { Button } from "@/components/ui/button"
 import { Calendar, Clock, ArrowRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { apiClient, BlogPost, Category } from "@/lib/api"
+import { apiClient, BlogPost, Category } from "@/lib/supabase-api"
 import { useEffect, useState } from "react"
 
 // Helper function to get the correct image URL
 const getImageUrl = (post: BlogPost): string | null => {
-  if (post.featured_image) {
+  if (post.featured_image_url) {
     // If it's a relative path, prepend the API base URL
-    if (post.featured_image.startsWith('/')) {
-      return `http://localhost:8000${post.featured_image}`
+    if (post.featured_image_url.startsWith('/')) {
+      return `http://localhost:8000${post.featured_image_url}`
     }
     // If it's already a full URL, return as is
-    return post.featured_image
+    return post.featured_image_url
   }
-  return post.featured_image_url || null
+  return null
 }
 
 export function Blog() {
@@ -81,15 +81,15 @@ export function Blog() {
 
   if (loading) {
     return (
-      <section id="blog" className="py-32 px-6 bg-gradient-to-br from-background via-card/20 to-background relative overflow-hidden">
+      <section id="blog" className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 bg-gradient-to-br from-background via-card/20 to-background relative overflow-hidden">
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-16">
-            <p className="text-sm tracking-widest text-amber-600 mb-4 font-medium">INSIGHTS & THOUGHTS</p>
-            <h2 className="text-5xl md:text-7xl font-serif font-bold text-foreground text-balance mb-6">
+          <div className="text-center mb-12 sm:mb-16">
+            <p className="text-sm sm:text-base tracking-widest text-amber-600 mb-4 font-medium">INSIGHTS & THOUGHTS</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-foreground text-balance mb-4 sm:mb-6">
               Our Latest
               <span className="block text-amber-600">Insights</span>
             </h2>
-            <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl lg:text-2xl text-foreground/70 max-w-4xl mx-auto leading-relaxed">
               Discover the latest trends, strategies, and insights from our team of experts in luxury digital experiences.
             </p>
           </div>
@@ -119,7 +119,7 @@ export function Blog() {
   }
 
   return (
-    <section id="blog" className="py-32 px-6 bg-gradient-to-br from-background via-card/20 to-background relative overflow-hidden">
+    <section id="blog" className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 bg-gradient-to-br from-background via-card/20 to-background relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/10 to-transparent animate-pulse" />
@@ -129,24 +129,24 @@ export function Blog() {
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-16 animate-fade-in-up">
-          <p className="text-sm tracking-widest text-amber-600 mb-4 font-medium animate-fade-in-up delay-300">INSIGHTS & THOUGHTS</p>
-          <h2 className="text-5xl md:text-7xl font-serif font-bold text-foreground text-balance mb-6 animate-fade-in-up delay-500">
+        <div className="text-center mb-12 sm:mb-16 animate-fade-in-up">
+          <p className="text-sm sm:text-base tracking-widest text-amber-600 mb-4 font-medium animate-fade-in-up delay-300">INSIGHTS & THOUGHTS</p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-foreground text-balance mb-4 sm:mb-6 animate-fade-in-up delay-500">
             Our Latest
             <span className="block text-amber-600 hover:text-amber-500 transition-colors duration-500">Insights</span>
           </h2>
-          <p className="text-xl text-foreground/70 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-700">
+          <p className="text-lg sm:text-xl lg:text-2xl text-foreground/70 max-w-4xl mx-auto leading-relaxed animate-fade-in-up delay-700">
             Discover the latest trends, strategies, and insights from our team of experts in luxury digital experiences.
           </p>
         </div>
 
         {/* Category Filter */}
-        <div className="flex flex-wrap justify-center gap-4 mb-12 animate-fade-in-up delay-1000">
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-8 sm:mb-12 animate-fade-in-up delay-1000">
           <Button
             key="All"
             variant={selectedCategory === "All" ? "default" : "outline"}
             onClick={() => setSelectedCategory("All")}
-            className={`px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+            className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full transition-all duration-300 hover:scale-105 text-sm sm:text-base ${
               selectedCategory === "All" 
                 ? "bg-amber-600 text-amber-50 hover:bg-amber-700 shadow-lg shadow-amber-600/25" 
                 : "border-amber-300/30 text-foreground hover:border-amber-500 hover:text-amber-600 hover:bg-amber-50/10"
@@ -160,7 +160,7 @@ export function Blog() {
               key={category.id}
               variant={selectedCategory === category.name ? "default" : "outline"}
               onClick={() => setSelectedCategory(category.name)}
-              className={`px-6 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-full transition-all duration-300 hover:scale-105 text-sm sm:text-base ${
                 selectedCategory === category.name 
                   ? "bg-amber-600 text-amber-50 hover:bg-amber-700 shadow-lg shadow-amber-600/25" 
                   : "border-amber-300/30 text-foreground hover:border-amber-500 hover:text-amber-600 hover:bg-amber-50/10"
@@ -199,10 +199,10 @@ export function Blog() {
                       </span>
                     </div>
                   </div>
-                  <div className="p-8 lg:p-12 flex flex-col justify-center">
-                    <div className="flex items-center gap-4 mb-4 text-sm text-muted-foreground">
+                  <div className="p-6 sm:p-8 lg:p-12 flex flex-col justify-center">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 text-sm sm:text-base text-muted-foreground">
                       {post.category && (
-                        <span className="px-2 py-1 bg-amber-100/20 text-amber-600 rounded text-xs font-medium">
+                        <span className="px-2 py-1 bg-amber-100/20 text-amber-600 rounded text-xs sm:text-sm font-medium">
                           {post.category.name}
                         </span>
                       )}
@@ -215,10 +215,10 @@ export function Blog() {
                         {post.read_time} min read
                       </div>
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4 group-hover:text-amber-600 transition-colors duration-500">
+                    <h3 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-foreground mb-4 group-hover:text-amber-600 transition-colors duration-500">
                       {post.title}
                     </h3>
-                    <p className="text-foreground/70 leading-relaxed mb-6 text-lg">
+                    <p className="text-foreground/70 leading-relaxed mb-6 text-base sm:text-lg">
                       {post.excerpt}
                     </p>
                     <div className="flex items-center justify-between">
@@ -248,7 +248,7 @@ export function Blog() {
         )}
 
         {/* Blog Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
           {displayRegular.map((post, index) => (
             <Card 
               key={post.id} 
@@ -256,7 +256,7 @@ export function Blog() {
               style={{ animationDelay: `${(index + 1) * 0.2}s` }}
             >
               <Link href={`/blog/${post.slug}`} className="block">
-              <div className="relative h-48 overflow-hidden">
+              <div className="relative h-48 sm:h-56 overflow-hidden">
                 {getImageUrl(post) ? (
                   <Image
                     src={getImageUrl(post)!}
@@ -272,27 +272,27 @@ export function Blog() {
                 <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
                 {post.category && (
                   <div className="absolute top-4 left-4">
-                    <span className="px-2 py-1 bg-amber-100/20 text-amber-600 rounded text-xs font-medium">
+                    <span className="px-2 py-1 bg-amber-100/20 text-amber-600 rounded text-xs sm:text-sm font-medium">
                       {post.category.name}
                     </span>
                   </div>
                 )}
               </div>
-              <div className="p-6">
-                <div className="flex items-center gap-4 mb-3 text-xs text-muted-foreground">
+              <div className="p-4 sm:p-6">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 text-xs sm:text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
+                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                     {post.published_at ? formatDate(post.published_at) : formatDate(post.created_at)}
                   </div>
                   <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
                     {post.read_time} min read
                   </div>
                 </div>
-                <h3 className="text-xl font-serif font-bold text-foreground mb-3 group-hover:text-amber-600 transition-colors duration-500 line-clamp-2">
+                <h3 className="text-lg sm:text-xl font-serif font-bold text-foreground mb-3 group-hover:text-amber-600 transition-colors duration-500 line-clamp-2">
                   {post.title}
                 </h3>
-                <p className="text-foreground/70 leading-relaxed mb-4 text-sm line-clamp-3">
+                <p className="text-foreground/70 leading-relaxed mb-4 text-sm sm:text-base line-clamp-3">
                   {post.excerpt}
                 </p>
                 <div className="flex items-center justify-between">

@@ -4,21 +4,21 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ExternalLink, Github, Calendar, User } from "lucide-react"
-import { apiClient, Project } from "@/lib/api"
+import { apiClient, Project } from "@/lib/supabase-api"
 import { useEffect, useState } from "react"
 import Image from "next/image"
 
 // Helper function to get the correct image URL
 const getImageUrl = (project: Project): string | null => {
-  if (project.featured_image) {
+  if (project.featured_image_url) {
     // If it's a relative path, prepend the API base URL
-    if (project.featured_image.startsWith('/')) {
-      return `http://localhost:8000${project.featured_image}`
+    if (project.featured_image_url.startsWith('/')) {
+      return `http://localhost:8000${project.featured_image_url}`
     }
     // If it's already a full URL, return as is
-    return project.featured_image
+    return project.featured_image_url
   }
-  return project.featured_image_url || null
+  return null
 }
 
 export function CaseStudies() {
@@ -42,19 +42,19 @@ export function CaseStudies() {
 
   if (loading) {
     return (
-      <section id="work" className="py-32 px-6 bg-muted/20 relative overflow-hidden">
+      <section id="work" className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 bg-muted/20 relative overflow-hidden">
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-20">
-            <p className="text-sm tracking-widest text-amber-600 mb-4 font-medium">OUR WORK</p>
-            <h2 className="text-5xl md:text-7xl font-serif font-bold text-foreground text-balance">
+          <div className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <p className="text-sm sm:text-base tracking-widest text-amber-600 mb-4 font-medium">OUR WORK</p>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-foreground text-balance">
               Featured Projects
             </h2>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {[1, 2, 3].map((i) => (
               <Card key={i} className="overflow-hidden bg-card/50 backdrop-blur-sm border-border animate-pulse">
                 <div className="aspect-video bg-muted-foreground/20"></div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 sm:p-6 space-y-4">
                   <div className="h-6 bg-muted-foreground/20 rounded w-3/4"></div>
                   <div className="h-4 bg-muted-foreground/20 rounded w-full"></div>
                   <div className="h-4 bg-muted-foreground/20 rounded w-2/3"></div>
@@ -72,22 +72,22 @@ export function CaseStudies() {
   }
 
   return (
-    <section id="work" className="py-32 px-6 bg-muted/20 relative overflow-hidden">
+    <section id="work" className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 bg-muted/20 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-500/5 to-transparent pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-amber-500/3 to-transparent pointer-events-none animate-pulse" />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="text-center mb-20 animate-fade-in-up">
-          <p className="text-sm tracking-widest text-amber-600 mb-4 font-medium animate-fade-in-up delay-300">OUR WORK</p>
-          <h2 className="text-5xl md:text-7xl font-serif font-bold text-foreground text-balance animate-fade-in-up delay-500">
+        <div className="text-center mb-12 sm:mb-16 lg:mb-20 animate-fade-in-up">
+          <p className="text-sm sm:text-base tracking-widest text-amber-600 mb-4 font-medium animate-fade-in-up delay-300">OUR WORK</p>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-foreground text-balance animate-fade-in-up delay-500">
             Featured Projects
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed mt-6 animate-fade-in-up delay-700">
+          <p className="text-lg sm:text-xl lg:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed mt-4 sm:mt-6 animate-fade-in-up delay-700">
             Discover our portfolio of exceptional digital experiences that have transformed businesses and delighted users.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {projects.map((project, index) => (
             <Card
               key={project.id}
@@ -119,32 +119,32 @@ export function CaseStudies() {
                 </div>
               )}
               
-              <div className="p-6 space-y-4">
+              <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
                 <div className="space-y-2">
-                  <h3 className="text-xl font-serif font-semibold text-foreground group-hover:text-amber-600 transition-colors duration-500">
+                  <h3 className="text-lg sm:text-xl font-serif font-semibold text-foreground group-hover:text-amber-600 transition-colors duration-500">
                     {project.title}
                   </h3>
                   {project.client_name && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm sm:text-base text-muted-foreground">
                       <User className="h-4 w-4" />
                       <span>{project.client_name}</span>
                     </div>
                   )}
                 </div>
                 
-                <p className="text-foreground/70 leading-relaxed text-sm group-hover:text-foreground/90 transition-colors duration-500">
+                <p className="text-foreground/70 leading-relaxed text-sm sm:text-base group-hover:text-foreground/90 transition-colors duration-500">
                   {project.description}
                 </p>
                 
                 {project.technologies && project.technologies.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {project.technologies.slice(0, 3).map((tech) => (
-                      <Badge key={tech} variant="outline" className="text-xs">
+                      <Badge key={tech} variant="outline" className="text-xs sm:text-sm">
                         {tech}
                       </Badge>
                     ))}
                     {project.technologies.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs sm:text-sm">
                         +{project.technologies.length - 3} more
                       </Badge>
                     )}
