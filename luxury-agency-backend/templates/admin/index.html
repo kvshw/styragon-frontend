@@ -1,0 +1,847 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static admin_urls %}
+
+{% block extrahead %}
+{{ block.super }}
+<script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+<style>
+    /* Orange Design System - Dashboard Styles */
+    .dashboard-hero {
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        color: white;
+        padding: 80px 0;
+        margin: 0 6px 60px 0px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        border-radius: 0 0 32px 32px;
+    }
+    
+    .dashboard-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, rgba(225, 113, 0, 0.1) 50%, transparent 70%);
+        pointer-events: none;
+        animation: shimmer 4s ease-in-out infinite;
+    }
+    
+    .dashboard-hero::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #e17100, transparent);
+        opacity: 0.6;
+    }
+    
+    @keyframes shimmer {
+        0%, 100% { opacity: 0.3; }
+        50% { opacity: 0.8; }
+    }
+    
+    .dashboard-hero h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 3.5rem;
+        font-weight: 800;
+        margin-bottom: 20px;
+        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 30px rgba(225, 113, 0, 0.3);
+        position: relative;
+        z-index: 1;
+        background: linear-gradient(135deg, #ffffff 0%, #f4a261 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .dashboard-hero p {
+        font-size: 1.3rem;
+        opacity: 0.9;
+        max-width: 700px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+        font-weight: 300;
+        letter-spacing: 0.5px;
+    }
+    
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 32px;
+        margin-left: 20px;
+            margin-right: 20px;
+        margin-bottom: 60px;
+        width: 100%;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f3f4f6;
+        text-align: center;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        width: 60%;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        border-radius: 20px 20px 0 0;
+    }
+    
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(225, 113, 0, 0.1), transparent);
+        transition: left 0.6s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-12px) scale(1.02);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15), 0 0 30px rgba(225, 113, 0, 0.2);
+    }
+    
+    .stat-card:hover::after {
+        left: 100%;
+    }
+    
+    .stat-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        font-size: 32px;
+        color: white;
+        box-shadow: 0 8px 25px rgba(225, 113, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover .stat-icon {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 12px 35px rgba(225, 113, 0, 0.4);
+    }
+    
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 800;
+        color: #0f0f0f;
+        margin-bottom: 12px;
+        font-family: 'Playfair Display', serif;
+        background: linear-gradient(135deg, #0f0f0f 0%, #374151 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .stat-label {
+        font-size: 0.95rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 700;
+    }
+    
+    .dashboard-content {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 40px;
+        margin-bottom: 60px;
+        width: 99%;
+    }
+    
+    .welcome-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        padding: 40px;
+        border: 1px solid #f3f4f6;
+        position: relative;
+        overflow: hidden;
+        margin: 10px;
+    }
+    
+    .welcome-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        border-radius: 20px 20px 0 0;
+    }
+    
+    .welcome-card h2 {
+        color: #0f0f0f;
+        font-family: 'Playfair Display', serif;
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        background: linear-gradient(135deg, #0f0f0f 0%, #374151 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .welcome-card p {
+        color: #6b7280;
+        font-size: 1.1rem;
+        line-height: 1.7;
+        margin-bottom: 32px;
+        font-weight: 400;
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .quick-action-btn {
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        color: white;
+        text-decoration: none;
+        padding: 20px 24px;
+        border-radius: 16px;
+        font-weight: 700;
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(225, 113, 0, 0.3);
+    }
+    
+    .quick-action-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s ease;
+    }
+    
+    .quick-action-btn:hover {
+        background: linear-gradient(135deg, #cc6600 0%, #b71c1c 100%);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 15px 35px rgba(225, 113, 0, 0.4);
+        color: white;
+    }
+    
+    .quick-action-btn:hover::before {
+        left: 100%;
+    }
+    
+    .activity-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        padding: 40px;
+        border: 1px solid #f3f4f6;
+        position: relative;
+        overflow: hidden;
+        margin: 10px;
+    }
+    
+    .activity-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        border-radius: 20px 20px 0 0;
+    }
+    
+    .activity-card h3 {
+        color: #0f0f0f;
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+        font-family: 'Playfair Display', serif;
+        background: linear-gradient(135deg, #0f0f0f 0%, #374151 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .activity-item {
+        display: flex;
+        align-items: center;
+        padding: 20px 0;
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+    
+    .activity-item:hover {
+        background: linear-gradient(135deg, #faf8f3 0%, #fefcf7 100%);
+        margin: 0 -40px;
+        padding-left: 40px;
+        padding-right: 40px;
+        border-radius: 12px;
+    }
+    
+    .activity-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 20px;
+        color: white;
+        font-size: 20px;
+        box-shadow: 0 4px 15px rgba(225, 113, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .activity-item:hover .activity-icon {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 6px 20px rgba(225, 113, 0, 0.4);
+    }
+    
+    .activity-content h4 {
+        color: #0f0f0f;
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+    
+    .activity-content p {
+        color: #6b7280;
+        font-size: 0.85rem;
+        margin: 0;
+        font-weight: 400;
+    }
+    
+    .content-modules {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 32px;
+        width: 99%;
+        margin: 10px;
+    }
+    
+    .module-card {
+        background: white;
+        border: 1px solid #f3f4f6;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        cursor: pointer;
+    }
+    
+    .module-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .module-card:hover {
+        transform: translateY(-8px) scale(1.00);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15), 0 0 30px rgba(225, 113, 0, 0.2);
+    }
+    
+    .module-card:hover::before {
+        opacity: 1;
+    }
+    
+    .module-card-header {
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        color: white;
+        padding: 24px 28px;
+        font-weight: 700;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-family: 'Inter', sans-serif;
+        position: relative;
+    }
+    
+    .module-card-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    }
+    
+    .module-card-content {
+        padding: 28px;
+    }
+    
+    .module-card-content a {
+        color: #0f0f0f;
+        text-decoration: none;
+        display: block;
+        padding: 16px 0;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 0.9rem;
+        position: relative;
+    }
+    
+    .module-card-content a:hover {
+        color: #e17100;
+        transform: translateX(12px);
+        background: linear-gradient(135deg, #faf8f3 0%, #fefcf7 100%);
+        margin: 0 -28px;
+        padding-left: 28px;
+        padding-right: 28px;
+        border-radius: 8px;
+    }
+    
+    .module-card-content a:last-child {
+        border-bottom: none;
+    }
+    
+    .module-card-content a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 0;
+        height: 3px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 100%);
+        transition: width 0.3s ease;
+        transform: translateY(-50%);
+        border-radius: 2px;
+    }
+    
+    .module-card-content a:hover::before {
+        width: 6px;
+    }
+    
+    .add-link {
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        color: white;
+        font-weight: 700;
+        margin: 20px 28px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 16px 20px;
+        text-decoration: none;
+        display: block;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(225, 113, 0, 0.3);
+    }
+    
+    .add-link::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s ease;
+    }
+    
+    .add-link:hover {
+        background: linear-gradient(135deg, #cc6600 0%, #b71c1c 100%);
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(225, 113, 0, 0.4);
+        color: white;
+    }
+    
+    .add-link:hover::before {
+        left: 100%;
+    }
+    
+    /* Enhanced Status Badges */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-right: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .badge::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.6s ease;
+    }
+    
+    .badge:hover::before {
+        left: 100%;
+    }
+    
+    .badge-published {
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        color: white;
+    }
+    
+    .badge-draft {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+    
+    .badge-featured {
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 100%);
+        color: white;
+    }
+    
+    /* Enhanced Table */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f3f4f6;
+        position: relative;
+    }
+    
+    .table::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+    }
+    
+    .table th {
+        background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+        color: white;
+        padding: 20px 16px;
+        font-weight: 700;
+        text-align: left;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        font-family: 'Inter', sans-serif;
+        position: relative;
+    }
+    
+    .table th::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, #e17100, transparent);
+    }
+    
+    .table td {
+        padding: 20px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        background: white;
+        font-size: 0.9rem;
+        color: #0f0f0f;
+        transition: all 0.3s ease;
+    }
+    
+    .table tr:hover td {
+        background: linear-gradient(135deg, #faf8f3 0%, #fefcf7 100%);
+        transform: scale(1.01);
+    }
+    
+    .table tr:nth-child(even) td {
+        background: #f8fafc;
+    }
+    
+    .table tr:nth-child(even):hover td {
+        background: linear-gradient(135deg, #faf8f3 0%, #fefcf7 100%);
+    }
+    
+    .btn {
+        background: linear-gradient(135deg, #e17100 0%, #ff8c00 50%, #cc6600 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+        display: inline-block;
+        box-shadow: 0 4px 15px rgba(225, 113, 0, 0.3);
+        font-size: 0.875rem;
+        font-family: 'Inter', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s ease;
+    }
+    
+    .btn:hover {
+        background: linear-gradient(135deg, #cc6600 0%, #b71c1c 100%);
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 8px 25px rgba(225, 113, 0, 0.4);
+        color: white;
+    }
+    
+    .btn:hover::before {
+        left: 100%;
+    }
+    
+    .btn-secondary {
+        background: #f8fafc;
+        color: #0f0f0f;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-secondary:hover {
+        background: #e5e7eb;
+        color: #0f0f0f;
+        transform: translateY(-2px) scale(1.05);
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .quick-actions {
+            grid-template-columns: 1fr;
+        }
+        
+        .dashboard-stats {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
+        .dashboard-hero h1 {
+            font-size: 2.5rem;
+        }
+        
+        .content-modules {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block coltype %}colMS{% endblock %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<!-- Enhanced Hero Section -->
+<div class="dashboard-hero">
+    <h1>Welcome to Styragon</h1>
+    <p>Manage your premium digital content with elegance and precision</p>
+</div>
+
+<!-- Enhanced Statistics Cards -->
+<div class="dashboard-stats">
+    <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div class="stat-number">{{ stats.total_blog_posts|default:"0" }}</div>
+        <div class="stat-label">Blog Posts</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🚀</div>
+        <div class="stat-number">{{ stats.total_projects|default:"0" }}</div>
+        <div class="stat-label">Projects</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">⚙️</div>
+        <div class="stat-number">{{ stats.total_services|default:"0" }}</div>
+        <div class="stat-label">Services</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">🏷️</div>
+        <div class="stat-number">{{ stats.total_categories|default:"0" }}</div>
+        <div class="stat-label">Categories</div>
+    </div>
+</div>
+
+<!-- Enhanced Main Content Grid -->
+<div class="dashboard-content">
+    <!-- Enhanced Welcome Card -->
+    <div class="welcome-card">
+        <h2>Content Management</h2>
+        <p>Create, edit, and organize your luxury digital agency content with our intuitive management system. Every piece of content is automatically synced with your website.</p>
+        
+        <div class="quick-actions">
+            <a href="{% url 'admin:cms_blogpost_add' %}" class="quick-action-btn">
+                ✍️ Add Blog Post
+            </a>
+            <a href="{% url 'admin:cms_project_add' %}" class="quick-action-btn">
+                🚀 Add Project
+            </a>
+            <a href="{% url 'admin:cms_service_add' %}" class="quick-action-btn">
+                ⚙️ Add Service
+            </a>
+            <a href="{% url 'admin:cms_category_add' %}" class="quick-action-btn">
+                🏷️ Add Category
+            </a>
+        </div>
+    </div>
+    
+    <!-- Enhanced Activity Card -->
+    <div class="activity-card">
+        <h3>Recent Activity</h3>
+        <div class="activity-item">
+            <div class="activity-icon">📝</div>
+            <div class="activity-content">
+                <h4>Content System Ready</h4>
+                <p>Your luxury CMS is fully configured and ready to use</p>
+            </div>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon">🎨</div>
+            <div class="activity-content">
+                <h4>Design System Active</h4>
+                <p>Premium styling and luxury aesthetics are enabled</p>
+            </div>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon">🔗</div>
+            <div class="activity-content">
+                <h4>API Connected</h4>
+                <p>Frontend and backend are seamlessly integrated</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Content Modules -->
+<div class="content-modules">
+    {% for app in app_list %}
+        <div class="module-card">
+            <div class="module-card-header">{{ app.name }}</div>
+            <div class="module-card-content">
+                {% for model in app.models %}
+                    <a href="{{ model.admin_url }}">
+                        {{ model.name }}
+                    </a>
+                {% endfor %}
+                <a href="#" class="add-link">+ Add New</a>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Enhanced Sample Content Table -->
+<div class="welcome-card">
+    <h2>Recent Blog Posts</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Status</th>
+                <th>Featured</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in recent_blog_posts %}
+            <tr>
+                <td>{{ post.title|truncatechars:50 }}</td>
+                <td>{{ post.author.name }}</td>
+                <td>
+                    {% if post.published %}
+                        <span class="badge badge-published">Published</span>
+                    {% else %}
+                        <span class="badge badge-draft">Draft</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if post.featured %}
+                        <span class="badge badge-featured">Featured</span>
+                    {% endif %}
+                </td>
+                <td>{{ post.created_at|date:"M d, Y" }}</td>
+                <td>
+                    <a href="{% url 'admin:cms_blogpost_change' post.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.75rem;">Edit</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                    No blog posts yet. <a href="{% url 'admin:cms_blogpost_add' %}" style="color: #e17100;">Create your first post</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
