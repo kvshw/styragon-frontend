@@ -1,1 +1,2 @@
-web: gunicorn luxury_cms.wsgi:application
+release: source .venv/bin/activate && python manage.py migrate --noinput && python manage.py collectstatic --noinput
+web: source .venv/bin/activate && gunicorn luxury_cms.wsgi:application --bind 0.0.0.0:8000
