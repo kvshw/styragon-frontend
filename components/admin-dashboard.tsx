@@ -469,7 +469,8 @@ export default function AdminDashboard() {
         featured_image_url: null,
         published: false,
         featured: false,
-        category_id: null
+        category_id: null,
+        author_id: null
       })
     } else {
       setNewProject({
