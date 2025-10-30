@@ -87,6 +87,7 @@ export default function AdminDashboard() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [slugError, setSlugError] = useState<string | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   
   // UI state
@@ -183,6 +184,21 @@ export default function AdminDashboard() {
   const handleCreate = async () => {
     setUploading(true)
     try {
+      // Validate slug uniqueness
+      const slugToCheck = contentType === 'blog' ? newBlogPost.slug : newProject.slug
+      const tableToCheck = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const { data: existing, error: checkError } = await supabase
+        .from(tableToCheck)
+        .select('id')
+        .eq('slug', slugToCheck)
+        .limit(1)
+      if (checkError) throw checkError
+      if (existing && existing.length > 0) {
+        setSlugError('This slug is already in use. Please choose another.')
+        setUploading(false)
+        return
+      }
+
       let imageUrl = null
       
       if (contentType === 'blog' && newBlogPost.featured_image_url) {
@@ -262,6 +278,22 @@ export default function AdminDashboard() {
     
     setUploading(true)
     try {
+      // Validate slug uniqueness (exclude current item)
+      const slugToCheck = contentType === 'blog' ? newBlogPost.slug : newProject.slug
+      const tableToCheck = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const { data: existing, error: checkError } = await supabase
+        .from(tableToCheck)
+        .select('id')
+        .eq('slug', slugToCheck)
+        .neq('id', editingItem.id)
+        .limit(1)
+      if (checkError) throw checkError
+      if (existing && existing.length > 0) {
+        setSlugError('This slug is already in use. Please choose another.')
+        setUploading(false)
+        return
+      }
+
       let imageUrl = editingItem.featured_image_url
       
       if (contentType === 'blog' && newBlogPost.featured_image_url) {
@@ -452,6 +484,7 @@ export default function AdminDashboard() {
         slug: generateSlug(title)
       })
     }
+    setSlugError(null)
   }
 
   // Filter and search
@@ -797,11 +830,15 @@ export default function AdminDashboard() {
                       } else {
                         setNewProject({ ...newProject, slug: e.target.value })
                       }
+                      setSlugError(null)
                     }}
                     placeholder="url-friendly-slug"
                     className="h-14 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
                     required
                   />
+                  {slugError && (
+                    <p className="mt-2 text-sm text-red-500">{slugError}</p>
+                  )}
                 </div>
 
                 {/* Description/Excerpt */}
@@ -930,7 +967,7 @@ export default function AdminDashboard() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={uploading}
+                    disabled={uploading || !!slugError}
                     className="bg-amber-600 hover:bg-amber-700 text-white h-14 px-8 text-lg font-medium"
                   >
                     {uploading ? (

@@ -18,9 +18,29 @@ const cormorantGaramond = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: "Styragon — Luxury Digital Agency",
+  metadataBase: new URL('https://www.styragon.com'),
+  title: {
+    default: "Styragon — Luxury Digital Agency",
+    template: "%s — Styragon",
+  },
   description: "Premium SAAS and Web Design Studio",
-  generator: "v0.app",
+  openGraph: {
+    title: "Styragon — Luxury Digital Agency",
+    description: "Premium SAAS and Web Design Studio",
+    url: "https://www.styragon.com",
+    siteName: "Styragon",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@styragon",
+    creator: "@styragon",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 }
 
 export default function RootLayout({
