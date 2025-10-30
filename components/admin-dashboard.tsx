@@ -2,6 +2,29 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  EyeOff, 
+  Star, 
+  StarOff, 
+  Upload, 
+  X, 
+  Save, 
+  ArrowLeft,
+  Search,
+  Filter,
+  Calendar,
+  User,
+  Image as ImageIcon
+} from 'lucide-react'
 
 interface BlogPost {
   id: string
@@ -13,6 +36,7 @@ interface BlogPost {
   published: boolean
   featured: boolean
   created_at: string
+  updated_at?: string
 }
 
 interface Project {
@@ -24,6 +48,7 @@ interface Project {
   published: boolean
   featured: boolean
   created_at: string
+  updated_at?: string
 }
 
 interface NewBlogPost {
@@ -45,12 +70,24 @@ interface NewProject {
   featured: boolean
 }
 
+type ViewMode = 'list' | 'create' | 'edit'
+type ContentType = 'blog' | 'project'
+
 export default function AdminDashboard() {
+  // State management
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
-  const [showAddBlogPost, setShowAddBlogPost] = useState(false)
-  const [showAddProject, setShowAddProject] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  
+  // UI state
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [contentType, setContentType] = useState<ContentType>('blog')
+  const [editingItem, setEditingItem] = useState<BlogPost | Project | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'featured'>('all')
+  
+  // Form state
   const [newBlogPost, setNewBlogPost] = useState<NewBlogPost>({
     title: '',
     slug: '',
@@ -60,6 +97,7 @@ export default function AdminDashboard() {
     published: false,
     featured: false
   })
+  
   const [newProject, setNewProject] = useState<NewProject>({
     title: '',
     slug: '',
@@ -68,7 +106,6 @@ export default function AdminDashboard() {
     published: false,
     featured: false
   })
-  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -79,7 +116,7 @@ export default function AdminDashboard() {
       // Fetch blog posts
       const { data: blogData, error: blogError } = await supabase
         .from('blog_posts')
-        .select('id, title, slug, excerpt, content, featured_image_url, published, featured, created_at')
+        .select('id, title, slug, excerpt, content, featured_image_url, published, featured, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (blogError) throw blogError
@@ -87,7 +124,7 @@ export default function AdminDashboard() {
       // Fetch projects
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
-        .select('id, title, slug, description, featured_image_url, published, featured, created_at')
+        .select('id, title, slug, description, featured_image_url, published, featured, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (projectError) throw projectError
@@ -101,43 +138,11 @@ export default function AdminDashboard() {
     }
   }
 
-  const togglePublished = async (table: 'blog_posts' | 'projects', id: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from(table)
-        .update({ published: !currentStatus })
-        .eq('id', id)
-
-      if (error) throw error
-
-      // Refresh data
-      fetchData()
-    } catch (error) {
-      console.error('Error updating:', error)
-    }
-  }
-
-  const toggleFeatured = async (table: 'blog_posts' | 'projects', id: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from(table)
-        .update({ featured: !currentStatus })
-        .eq('id', id)
-
-      if (error) throw error
-
-      // Refresh data
-      fetchData()
-    } catch (error) {
-      console.error('Error updating:', error)
-    }
-  }
-
   const uploadImage = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `project-images/${fileName}`
+      const filePath = `${contentType === 'blog' ? 'blog-images' : 'project-images'}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('images')
@@ -156,101 +161,218 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleAddProject = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleCreate = async () => {
     setUploading(true)
-
     try {
       let imageUrl = null
       
-      if (newProject.featured_image_url) {
+      if (contentType === 'blog' && newBlogPost.featured_image_url) {
+        imageUrl = await uploadImage(newBlogPost.featured_image_url)
+        if (!imageUrl) {
+          alert('Failed to upload image')
+          return
+        }
+      } else if (contentType === 'project' && newProject.featured_image_url) {
         imageUrl = await uploadImage(newProject.featured_image_url)
         if (!imageUrl) {
           alert('Failed to upload image')
-          setUploading(false)
           return
         }
       }
 
+      const table = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const data = contentType === 'blog' ? {
+        title: newBlogPost.title,
+        slug: newBlogPost.slug,
+        excerpt: newBlogPost.excerpt,
+        content: newBlogPost.content,
+        featured_image_url: imageUrl,
+        published: newBlogPost.published,
+        featured: newBlogPost.featured
+      } : {
+        title: newProject.title,
+        slug: newProject.slug,
+        description: newProject.description,
+        featured_image_url: imageUrl,
+        published: newProject.published,
+        featured: newProject.featured
+      }
+
       const { error } = await supabase
-        .from('projects')
-        .insert({
-          title: newProject.title,
-          slug: newProject.slug,
-          description: newProject.description,
-          featured_image_url: imageUrl,
-          published: newProject.published,
-          featured: newProject.featured
-        })
+        .from(table)
+        .insert(data)
 
       if (error) throw error
 
       // Reset form
-      setNewProject({
-        title: '',
-        slug: '',
-        description: '',
-        featured_image_url: null,
-        published: false,
-        featured: false
-      })
-      setShowAddProject(false)
+      if (contentType === 'blog') {
+        setNewBlogPost({
+          title: '',
+          slug: '',
+          excerpt: '',
+          content: '',
+          featured_image_url: null,
+          published: false,
+          featured: false
+        })
+      } else {
+        setNewProject({
+          title: '',
+          slug: '',
+          description: '',
+          featured_image_url: null,
+          published: false,
+          featured: false
+        })
+      }
 
-      // Refresh data
+      setViewMode('list')
       fetchData()
     } catch (error) {
-      console.error('Error adding project:', error)
-      alert('Failed to add project')
+      console.error('Error creating item:', error)
+      alert('Failed to create item')
     } finally {
       setUploading(false)
     }
   }
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setNewProject({ ...newProject, featured_image_url: file })
-    }
-  }
-
-  const handleBlogImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      setNewBlogPost({ ...newBlogPost, featured_image_url: file })
-    }
-  }
-
-  const handleAddBlogPost = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleUpdate = async () => {
+    if (!editingItem) return
+    
     setUploading(true)
-
     try {
-      let imageUrl = null
+      let imageUrl = editingItem.featured_image_url
       
-      if (newBlogPost.featured_image_url) {
+      if (contentType === 'blog' && newBlogPost.featured_image_url) {
         imageUrl = await uploadImage(newBlogPost.featured_image_url)
         if (!imageUrl) {
           alert('Failed to upload image')
-          setUploading(false)
+          return
+        }
+      } else if (contentType === 'project' && newProject.featured_image_url) {
+        imageUrl = await uploadImage(newProject.featured_image_url)
+        if (!imageUrl) {
+          alert('Failed to upload image')
           return
         }
       }
 
+      const table = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const data = contentType === 'blog' ? {
+        title: newBlogPost.title,
+        slug: newBlogPost.slug,
+        excerpt: newBlogPost.excerpt,
+        content: newBlogPost.content,
+        featured_image_url: imageUrl,
+        published: newBlogPost.published,
+        featured: newBlogPost.featured
+      } : {
+        title: newProject.title,
+        slug: newProject.slug,
+        description: newProject.description,
+        featured_image_url: imageUrl,
+        published: newProject.published,
+        featured: newProject.featured
+      }
+
       const { error } = await supabase
-        .from('blog_posts')
-        .insert({
-          title: newBlogPost.title,
-          slug: newBlogPost.slug,
-          excerpt: newBlogPost.excerpt,
-          content: newBlogPost.content,
-          featured_image_url: imageUrl,
-          published: newBlogPost.published,
-          featured: newBlogPost.featured
-        })
+        .from(table)
+        .update(data)
+        .eq('id', editingItem.id)
 
       if (error) throw error
 
-      // Reset form
+      setViewMode('list')
+      setEditingItem(null)
+      fetchData()
+    } catch (error) {
+      console.error('Error updating item:', error)
+      alert('Failed to update item')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return
+    
+    try {
+      const table = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      fetchData()
+    } catch (error) {
+      console.error('Error deleting item:', error)
+      alert('Failed to delete item')
+    }
+  }
+
+  const handleTogglePublished = async (id: string, currentStatus: boolean) => {
+    try {
+      const table = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const { error } = await supabase
+        .from(table)
+        .update({ published: !currentStatus })
+        .eq('id', id)
+
+      if (error) throw error
+
+      fetchData()
+    } catch (error) {
+      console.error('Error updating:', error)
+    }
+  }
+
+  const handleToggleFeatured = async (id: string, currentStatus: boolean) => {
+    try {
+      const table = contentType === 'blog' ? 'blog_posts' : 'projects'
+      const { error } = await supabase
+        .from(table)
+        .update({ featured: !currentStatus })
+        .eq('id', id)
+
+      if (error) throw error
+
+      fetchData()
+    } catch (error) {
+      console.error('Error updating:', error)
+    }
+  }
+
+  const startEdit = (item: BlogPost | Project) => {
+    setEditingItem(item)
+    if (contentType === 'blog') {
+      const blogItem = item as BlogPost
+      setNewBlogPost({
+        title: blogItem.title,
+        slug: blogItem.slug,
+        excerpt: blogItem.excerpt,
+        content: blogItem.content,
+        featured_image_url: null,
+        published: blogItem.published,
+        featured: blogItem.featured
+      })
+    } else {
+      const projectItem = item as Project
+      setNewProject({
+        title: projectItem.title,
+        slug: projectItem.slug,
+        description: projectItem.description,
+        featured_image_url: null,
+        published: projectItem.published,
+        featured: projectItem.featured
+      })
+    }
+    setViewMode('edit')
+  }
+
+  const resetForm = () => {
+    if (contentType === 'blog') {
       setNewBlogPost({
         title: '',
         slug: '',
@@ -260,400 +382,532 @@ export default function AdminDashboard() {
         published: false,
         featured: false
       })
-      setShowAddBlogPost(false)
-
-      // Refresh data
-      fetchData()
-    } catch (error) {
-      console.error('Error adding blog post:', error)
-      alert('Failed to add blog post')
-    } finally {
-      setUploading(false)
+    } else {
+      setNewProject({
+        title: '',
+        slug: '',
+        description: '',
+        featured_image_url: null,
+        published: false,
+        featured: false
+      })
     }
   }
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (contentType === 'blog') {
+        setNewBlogPost({ ...newBlogPost, featured_image_url: file })
+      } else {
+        setNewProject({ ...newProject, featured_image_url: file })
+      }
+    }
+  }
+
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9 -]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim()
+  }
+
+  const handleTitleChange = (title: string) => {
+    if (contentType === 'blog') {
+      setNewBlogPost({ 
+        ...newBlogPost, 
+        title,
+        slug: generateSlug(title)
+      })
+    } else {
+      setNewProject({ 
+        ...newProject, 
+        title,
+        slug: generateSlug(title)
+      })
+    }
+  }
+
+  // Filter and search
+  const getFilteredItems = () => {
+    if (contentType === 'blog') {
+      let filtered = blogPosts
+
+      // Search filter
+      if (searchTerm) {
+        filtered = filtered.filter(item =>
+          item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      }
+
+      // Status filter
+      if (filter === 'published') {
+        filtered = filtered.filter(item => item.published)
+      } else if (filter === 'draft') {
+        filtered = filtered.filter(item => !item.published)
+      } else if (filter === 'featured') {
+        filtered = filtered.filter(item => item.featured)
+      }
+
+      return filtered
+    } else {
+      let filtered = projects
+
+      // Search filter
+      if (searchTerm) {
+        filtered = filtered.filter(item =>
+          item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      }
+
+      // Status filter
+      if (filter === 'published') {
+        filtered = filtered.filter(item => item.published)
+      } else if (filter === 'draft') {
+        filtered = filtered.filter(item => !item.published)
+      } else if (filter === 'featured') {
+        filtered = filtered.filter(item => item.featured)
+      }
+
+      return filtered
+    }
+  }
+
+  const filteredItems = getFilteredItems()
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-600 mx-auto"></div>
+          <p className="mt-4 text-foreground/70 text-lg">Loading admin dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Styragon Admin Dashboard</h1>
-          <p className="mt-2 text-gray-600">Manage your content with Supabase</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Blog Posts */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Blog Posts</h2>
-                <p className="text-sm text-gray-600">{blogPosts.length} total posts</p>
-              </div>
-              <button
-                onClick={() => setShowAddBlogPost(true)}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
-              >
-                Add Blog Post
-              </button>
+        {/* Header */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-serif font-bold text-foreground mb-2">
+                Styragon Admin
+                <span className="block text-amber-600">Dashboard</span>
+              </h1>
+              <p className="text-lg sm:text-xl text-foreground/70 font-light">Manage your luxury content with precision</p>
             </div>
-            <div className="divide-y divide-gray-200">
-              {blogPosts.map((post) => (
-                <div key={post.id} className="px-6 py-4">
-                  <div className="flex items-start space-x-4">
-                    {post.featured_image_url && (
-                      <div className="flex-shrink-0">
-                        <img
-                          src={post.featured_image_url}
-                          alt={post.title}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-sm font-medium text-gray-900">{post.title}</h3>
-                          <p className="text-sm text-gray-500">{post.slug}</p>
-                          <p className="text-xs text-gray-400 truncate">{post.excerpt}</p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(post.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => togglePublished('blog_posts', post.id, post.published)}
-                            className={`px-3 py-1 text-xs rounded-full ${
-                              post.published
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {post.published ? 'Published' : 'Draft'}
-                          </button>
-                          <button
-                            onClick={() => toggleFeatured('blog_posts', post.id, post.featured)}
-                            className={`px-3 py-1 text-xs rounded-full ${
-                              post.featured
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {post.featured ? 'Featured' : 'Normal'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Projects */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Projects</h2>
-                <p className="text-sm text-gray-600">{projects.length} total projects</p>
-              </div>
-              <button
-                onClick={() => setShowAddProject(true)}
-                className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
-              >
-                Add Project
-              </button>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {projects.map((project) => (
-                <div key={project.id} className="px-6 py-4">
-                  <div className="flex items-start space-x-4">
-                    {project.featured_image_url && (
-                      <div className="flex-shrink-0">
-                        <img
-                          src={project.featured_image_url}
-                          alt={project.title}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-sm font-medium text-gray-900">{project.title}</h3>
-                          <p className="text-sm text-gray-500">{project.slug}</p>
-                          <p className="text-xs text-gray-400 truncate">{project.description}</p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(project.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => togglePublished('projects', project.id, project.published)}
-                            className={`px-3 py-1 text-xs rounded-full ${
-                              project.published
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {project.published ? 'Published' : 'Draft'}
-                          </button>
-                          <button
-                            onClick={() => toggleFeatured('projects', project.id, project.featured)}
-                            className={`px-3 py-1 text-xs rounded-full ${
-                              project.featured
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {project.featured ? 'Featured' : 'Normal'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
-          </div>
-          <div className="px-6 py-4">
-            <div className="flex space-x-4">
+            <div className="flex items-center gap-4">
               <a
                 href="https://supabase.com/dashboard"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="inline-flex items-center px-6 py-3 border border-amber-600/30 text-base font-medium rounded-md text-amber-600 bg-amber-600/10 hover:bg-amber-600/20 hover:border-amber-600/50 transition-all duration-300"
               >
                 Open Supabase Dashboard
               </a>
-              <button
+              <Button
                 onClick={fetchData}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                variant="outline"
+                className="inline-flex items-center px-6 py-3 text-base border-border hover:border-amber-600 hover:text-amber-600 hover:bg-amber-600/10 transition-all duration-300"
               >
                 Refresh Data
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Type Tabs */}
+        <div className="mb-8">
+          <div className="border-b border-border/20">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => {
+                  setContentType('blog')
+                  setViewMode('list')
+                  setSearchTerm('')
+                  setFilter('all')
+                }}
+                className={`py-3 px-1 border-b-2 font-serif font-semibold text-lg transition-all duration-300 ${
+                  contentType === 'blog'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-foreground/60 hover:text-foreground hover:border-amber-600/50'
+                }`}
+              >
+                Blog Posts ({blogPosts.length})
               </button>
-            </div>
+              <button
+                onClick={() => {
+                  setContentType('project')
+                  setViewMode('list')
+                  setSearchTerm('')
+                  setFilter('all')
+                }}
+                className={`py-3 px-1 border-b-2 font-serif font-semibold text-lg transition-all duration-300 ${
+                  contentType === 'project'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-foreground/60 hover:text-foreground hover:border-amber-600/50'
+                }`}
+              >
+                Projects ({projects.length})
+              </button>
+            </nav>
           </div>
         </div>
-      </div>
 
-      {/* Add Project Modal */}
-      {showAddProject && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Add New Project</h3>
-                <button
-                  onClick={() => setShowAddProject(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
+        {/* List View */}
+        {viewMode === 'list' && (
+          <>
+            {/* Search and Filter Bar */}
+            <div className="mb-8 flex flex-col sm:flex-row gap-6">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-foreground/40 h-5 w-5" />
+                  <Input
+                    type="text"
+                    placeholder={`Search ${contentType === 'blog' ? 'blog posts' : 'projects'}...`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-12 h-12 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                  />
+                </div>
               </div>
-              <form onSubmit={handleAddProject} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Title</label>
-                  <input
-                    type="text"
-                    value={newProject.title}
-                    onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Slug</label>
-                  <input
-                    type="text"
-                    value={newProject.slug}
-                    onChange={(e) => setNewProject({ ...newProject, slug: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea
-                    value={newProject.description}
-                    onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    rows={3}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Featured Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                </div>
-                <div className="flex space-x-4">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={newProject.published}
-                      onChange={(e) => setNewProject({ ...newProject, published: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Published</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={newProject.featured}
-                      onChange={(e) => setNewProject({ ...newProject, featured: e.target.checked })}
-                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Featured</span>
-                  </label>
-                </div>
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddProject(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={uploading}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {uploading ? 'Adding...' : 'Add Project'}
-                  </button>
-                </div>
-              </form>
+              <div className="flex gap-3">
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value as any)}
+                  className="px-4 py-3 border border-border/20 rounded-md text-base bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                >
+                  <option value="all">All</option>
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                  <option value="featured">Featured</option>
+                </select>
+                <Button
+                  onClick={() => {
+                    resetForm()
+                    setViewMode('create')
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 text-base font-medium h-12"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add {contentType === 'blog' ? 'Blog Post' : 'Project'}
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Add Blog Post Modal */}
-      {showAddBlogPost && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Add New Blog Post</h3>
-                <button
-                  onClick={() => setShowAddBlogPost(false)}
-                  className="text-gray-400 hover:text-gray-600"
+            {/* Items Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredItems.map((item) => (
+                <Card key={item.id} className="overflow-hidden hover:shadow-2xl transition-all duration-500 border-border/20 bg-card/50 backdrop-blur-sm hover:border-amber-600/30 group">
+                  {/* Image */}
+                  {item.featured_image_url && (
+                    <div className="aspect-video relative overflow-hidden">
+                      <img
+                        src={item.featured_image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-3 right-3 flex gap-2">
+                        {item.featured && (
+                          <Badge className="bg-amber-600/90 text-white border-0 px-3 py-1 text-sm font-medium">
+                            <Star className="h-4 w-4 mr-1" />
+                            Featured
+                          </Badge>
+                        )}
+                        <Badge className={`${item.published ? 'bg-green-600/90 text-white' : 'bg-foreground/60 text-white'} border-0 px-3 py-1 text-sm font-medium`}>
+                          {item.published ? 'Published' : 'Draft'}
+                        </Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Content */}
+                  <div className="p-6">
+                    <h3 className="font-serif font-semibold text-xl mb-3 line-clamp-2 text-foreground group-hover:text-amber-600 transition-colors duration-300">
+                      {item.title}
+                    </h3>
+                    <p className="text-foreground/70 text-base mb-4 line-clamp-3 leading-relaxed">
+                      {contentType === 'blog' 
+                        ? (item as BlogPost).excerpt 
+                        : (item as Project).description
+                      }
+                    </p>
+                    <div className="flex items-center justify-between text-sm text-foreground/50 mb-6">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </div>
+                      <span className="text-foreground/40 font-mono">#{item.slug}</span>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => startEdit(item)}
+                        className="flex-1 h-10 text-sm font-medium border-border/20 hover:border-amber-600/50 hover:text-amber-600 hover:bg-amber-600/10 transition-all duration-300"
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleTogglePublished(item.id, item.published)}
+                        className={`h-10 px-3 border-border/20 hover:border-green-600/50 transition-all duration-300 ${
+                          item.published ? 'text-green-600 hover:text-green-700' : 'text-foreground/60 hover:text-green-600'
+                        }`}
+                      >
+                        {item.published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleToggleFeatured(item.id, item.featured)}
+                        className={`h-10 px-3 border-border/20 hover:border-amber-600/50 transition-all duration-300 ${
+                          item.featured ? 'text-amber-600 hover:text-amber-700' : 'text-foreground/60 hover:text-amber-600'
+                        }`}
+                      >
+                        {item.featured ? <Star className="h-4 w-4" /> : <StarOff className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDelete(item.id)}
+                        className="h-10 px-3 text-red-600 hover:text-red-700 border-border/20 hover:border-red-600/50 hover:bg-red-600/10 transition-all duration-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {filteredItems.length === 0 && (
+              <div className="text-center py-16">
+                <p className="text-foreground/60 text-xl font-light mb-8">
+                  {searchTerm || filter !== 'all' 
+                    ? `No ${contentType === 'blog' ? 'blog posts' : 'projects'} found matching your criteria.`
+                    : `No ${contentType === 'blog' ? 'blog posts' : 'projects'} yet.`
+                  }
+                </p>
+                <Button
+                  onClick={() => {
+                    resetForm()
+                    setViewMode('create')
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-4 text-lg font-medium h-14"
                 >
-                  ✕
-                </button>
+                  <Plus className="h-5 w-5 mr-3" />
+                  Add Your First {contentType === 'blog' ? 'Blog Post' : 'Project'}
+                </Button>
               </div>
-              <form onSubmit={handleAddBlogPost} className="space-y-4">
+            )}
+          </>
+        )}
+
+        {/* Create/Edit Form */}
+        {(viewMode === 'create' || viewMode === 'edit') && (
+          <div className="max-w-5xl mx-auto">
+            <div className="mb-8">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setViewMode('list')
+                  setEditingItem(null)
+                  resetForm()
+                }}
+                className="mb-6 h-12 px-6 text-base border-border/20 hover:border-amber-600/50 hover:text-amber-600 hover:bg-amber-600/10 transition-all duration-300"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back to {contentType === 'blog' ? 'Blog Posts' : 'Projects'}
+              </Button>
+              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-foreground">
+                {viewMode === 'create' 
+                  ? `Create New ${contentType === 'blog' ? 'Blog Post' : 'Project'}`
+                  : `Edit ${contentType === 'blog' ? 'Blog Post' : 'Project'}`
+                }
+              </h2>
+            </div>
+
+            <Card className="p-8 border-border/20 bg-card/50 backdrop-blur-sm">
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                viewMode === 'create' ? handleCreate() : handleUpdate()
+              }} className="space-y-8">
+                {/* Title */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Title</label>
-                  <input
+                  <label className="block text-lg font-medium text-foreground mb-3">
+                    Title *
+                  </label>
+                  <Input
                     type="text"
-                    value={newBlogPost.title}
-                    onChange={(e) => setNewBlogPost({ ...newBlogPost, title: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    value={contentType === 'blog' ? newBlogPost.title : newProject.title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    placeholder="Enter title..."
+                    className="h-14 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
                     required
                   />
                 </div>
+
+                {/* Slug */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Slug</label>
-                  <input
+                  <label className="block text-lg font-medium text-foreground mb-3">
+                    Slug *
+                  </label>
+                  <Input
                     type="text"
-                    value={newBlogPost.slug}
-                    onChange={(e) => setNewBlogPost({ ...newBlogPost, slug: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    value={contentType === 'blog' ? newBlogPost.slug : newProject.slug}
+                    onChange={(e) => {
+                      if (contentType === 'blog') {
+                        setNewBlogPost({ ...newBlogPost, slug: e.target.value })
+                      } else {
+                        setNewProject({ ...newProject, slug: e.target.value })
+                      }
+                    }}
+                    placeholder="url-friendly-slug"
+                    className="h-14 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
                     required
                   />
                 </div>
+
+                {/* Description/Excerpt */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Excerpt</label>
-                  <textarea
-                    value={newBlogPost.excerpt}
-                    onChange={(e) => setNewBlogPost({ ...newBlogPost, excerpt: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    rows={2}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Content</label>
-                  <textarea
-                    value={newBlogPost.content}
-                    onChange={(e) => setNewBlogPost({ ...newBlogPost, content: e.target.value })}
-                    className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  <label className="block text-lg font-medium text-foreground mb-3">
+                    {contentType === 'blog' ? 'Excerpt' : 'Description'} *
+                  </label>
+                  <Textarea
+                    value={contentType === 'blog' ? newBlogPost.excerpt : newProject.description}
+                    onChange={(e) => {
+                      if (contentType === 'blog') {
+                        setNewBlogPost({ ...newBlogPost, excerpt: e.target.value })
+                      } else {
+                        setNewProject({ ...newProject, description: e.target.value })
+                      }
+                    }}
+                    placeholder={`Enter ${contentType === 'blog' ? 'excerpt' : 'description'}...`}
                     rows={4}
+                    className="text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
                     required
                   />
                 </div>
+
+                {/* Content (Blog only) */}
+                {contentType === 'blog' && (
+                  <div>
+                    <label className="block text-lg font-medium text-foreground mb-3">
+                      Content *
+                    </label>
+                    <Textarea
+                      value={newBlogPost.content}
+                      onChange={(e) => setNewBlogPost({ ...newBlogPost, content: e.target.value })}
+                      placeholder="Enter blog content..."
+                      rows={10}
+                      className="text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                      required
+                    />
+                  </div>
+                )}
+
+                {/* Featured Image */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Featured Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleBlogImageChange}
-                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                  />
+                  <label className="block text-lg font-medium text-foreground mb-3">
+                    Featured Image
+                  </label>
+                  <div className="flex items-center gap-6">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="flex-1 h-14 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                    />
+                    <div className="text-base text-foreground/60 flex items-center">
+                      <ImageIcon className="h-5 w-5 mr-2" />
+                      {contentType === 'blog' ? 'Blog' : 'Project'} Image
+                    </div>
+                  </div>
                 </div>
-                <div className="flex space-x-4">
+
+                {/* Status Options */}
+                <div className="flex gap-8">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={newBlogPost.published}
-                      onChange={(e) => setNewBlogPost({ ...newBlogPost, published: e.target.checked })}
-                      className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                      checked={contentType === 'blog' ? newBlogPost.published : newProject.published}
+                      onChange={(e) => {
+                        if (contentType === 'blog') {
+                          setNewBlogPost({ ...newBlogPost, published: e.target.checked })
+                        } else {
+                          setNewProject({ ...newProject, published: e.target.checked })
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-border/20 text-amber-600 shadow-sm focus:border-amber-600 focus:ring focus:ring-amber-200 focus:ring-opacity-50"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Published</span>
+                    <span className="ml-3 text-lg text-foreground">Published</span>
                   </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={newBlogPost.featured}
-                      onChange={(e) => setNewBlogPost({ ...newBlogPost, featured: e.target.checked })}
-                      className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                      checked={contentType === 'blog' ? newBlogPost.featured : newProject.featured}
+                      onChange={(e) => {
+                        if (contentType === 'blog') {
+                          setNewBlogPost({ ...newBlogPost, featured: e.target.checked })
+                        } else {
+                          setNewProject({ ...newProject, featured: e.target.checked })
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-border/20 text-amber-600 shadow-sm focus:border-amber-600 focus:ring focus:ring-amber-200 focus:ring-opacity-50"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Featured</span>
+                    <span className="ml-3 text-lg text-foreground">Featured</span>
                   </label>
                 </div>
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
+
+                {/* Submit Buttons */}
+                <div className="flex justify-end gap-6 pt-8 border-t border-border/20">
+                  <Button
                     type="button"
-                    onClick={() => setShowAddBlogPost(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                    variant="outline"
+                    onClick={() => {
+                      setViewMode('list')
+                      setEditingItem(null)
+                      resetForm()
+                    }}
+                    className="h-14 px-8 text-lg font-medium border-border/20 hover:border-foreground/30 hover:text-foreground transition-all duration-300"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
                     disabled={uploading}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50"
+                    className="bg-amber-600 hover:bg-amber-700 text-white h-14 px-8 text-lg font-medium"
                   >
-                    {uploading ? 'Adding...' : 'Add Blog Post'}
-                  </button>
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                        {viewMode === 'create' ? 'Creating...' : 'Updating...'}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-5 w-5 mr-3" />
+                        {viewMode === 'create' ? 'Create' : 'Update'}
+                      </>
+                    )}
+                  </Button>
                 </div>
               </form>
-            </div>
+            </Card>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

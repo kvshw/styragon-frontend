@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Cinzel, Cormorant_Garamond } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { AdminAuthProvider } from "@/contexts/admin-auth-context"
 import "./globals.css"
 
 const cinzel = Cinzel({
@@ -30,7 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${cinzel.variable} ${cormorantGaramond.variable} font-sans antialiased`} suppressHydrationWarning>
-        {children}
+        <AdminAuthProvider>
+          {children}
+        </AdminAuthProvider>
         <Analytics />
       </body>
     </html>
