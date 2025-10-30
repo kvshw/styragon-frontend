@@ -6,6 +6,7 @@ import { CaseStudies } from "@/components/case-studies"
 import { Blog } from "@/components/blog"
 import { Contact } from "@/components/contact"
 import { Footer } from "@/components/footer"
+import { Testimonials } from "@/components/testimonials"
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
       <Philosophy />
       <Process />
       <CaseStudies />
+      <Testimonials />
       <Blog />
       <Contact />
       <Footer />

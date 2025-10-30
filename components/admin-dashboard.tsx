@@ -25,6 +25,9 @@ import {
   User,
   Image as ImageIcon
 } from 'lucide-react'
+import AdminCategoriesManager from './admin-categories'
+import AdminTestimonialsManager from './admin-testimonials'
+import AdminAuthorsManager from './admin-authors'
 
 interface BlogPost {
   id: string
@@ -35,6 +38,7 @@ interface BlogPost {
   featured_image_url: string | null
   published: boolean
   featured: boolean
+  author_id?: string | null
   category_id?: string | null
   created_at: string
   updated_at?: string
@@ -61,6 +65,7 @@ interface NewBlogPost {
   published: boolean
   featured: boolean
   category_id: string | null
+  author_id: string | null
 }
 
 interface NewProject {
@@ -73,12 +78,18 @@ interface NewProject {
 }
 
 type ViewMode = 'list' | 'create' | 'edit'
-type ContentType = 'blog' | 'project'
+type ContentType = 'blog' | 'project' | 'categories' | 'testimonials' | 'authors'
 
 interface Category {
   id: string
   name: string
   slug: string
+}
+
+interface Author {
+  id: string
+  name: string
+  email: string
 }
 
 export default function AdminDashboard() {
@@ -89,6 +100,7 @@ export default function AdminDashboard() {
   const [uploading, setUploading] = useState(false)
   const [slugError, setSlugError] = useState<string | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
+  const [authors, setAuthors] = useState<Author[]>([])
   
   // UI state
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -106,7 +118,8 @@ export default function AdminDashboard() {
     featured_image_url: null,
     published: false,
     featured: false,
-    category_id: null
+    category_id: null,
+    author_id: null
   })
   
   const [newProject, setNewProject] = useState<NewProject>({
@@ -148,9 +161,18 @@ export default function AdminDashboard() {
 
       if (categoriesError) throw categoriesError
 
+      // Fetch authors
+      const { data: authorsData, error: authorsError } = await supabase
+        .from('authors')
+        .select('id, name, email')
+        .order('name', { ascending: true })
+
+      if (authorsError) throw authorsError
+
       setBlogPosts(blogData || [])
       setProjects(projectData || [])
       setCategories(categoriesData || [])
+      setAuthors(authorsData || [])
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -224,7 +246,8 @@ export default function AdminDashboard() {
         featured_image_url: imageUrl,
         published: newBlogPost.published,
         featured: newBlogPost.featured,
-        category_id: newBlogPost.category_id
+        category_id: newBlogPost.category_id,
+        author_id: newBlogPost.author_id
       } : {
         title: newProject.title,
         slug: newProject.slug,
@@ -250,7 +273,8 @@ export default function AdminDashboard() {
           featured_image_url: null,
           published: false,
           featured: false,
-          category_id: null
+          category_id: null,
+          author_id: null
         })
       } else {
         setNewProject({
@@ -319,7 +343,8 @@ export default function AdminDashboard() {
         featured_image_url: imageUrl,
         published: newBlogPost.published,
         featured: newBlogPost.featured,
-        category_id: newBlogPost.category_id
+        category_id: newBlogPost.category_id,
+        author_id: newBlogPost.author_id
       } : {
         title: newProject.title,
         slug: newProject.slug,
@@ -410,7 +435,8 @@ export default function AdminDashboard() {
         featured_image_url: null,
         published: blogItem.published,
         featured: blogItem.featured,
-        category_id: blogItem.category_id ?? null
+        category_id: blogItem.category_id ?? null,
+        author_id: blogItem.author_id ?? null
       })
     } else {
       const projectItem = item as Project
@@ -583,7 +609,7 @@ export default function AdminDashboard() {
         {/* Content Type Tabs */}
         <div className="mb-8">
           <div className="border-b border-border/20">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex space-x-8 overflow-x-auto">
               <button
                 onClick={() => {
                   setContentType('blog')
@@ -614,12 +640,68 @@ export default function AdminDashboard() {
               >
                 Projects ({projects.length})
               </button>
+              <button
+                onClick={() => {
+                  setContentType('categories')
+                  setViewMode('list')
+                  setSearchTerm('')
+                  setFilter('all')
+                }}
+                className={`py-3 px-1 border-b-2 font-serif font-semibold text-lg transition-all duration-300 ${
+                  contentType === 'categories'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-foreground/60 hover:text-foreground hover:border-amber-600/50'
+                }`}
+              >
+                Categories
+              </button>
+              <button
+                onClick={() => {
+                  setContentType('testimonials')
+                  setViewMode('list')
+                  setSearchTerm('')
+                  setFilter('all')
+                }}
+                className={`py-3 px-1 border-b-2 font-serif font-semibold text-lg transition-all duration-300 ${
+                  contentType === 'testimonials'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-foreground/60 hover:text-foreground hover:border-amber-600/50'
+                }`}
+              >
+                Testimonials
+              </button>
+              <button
+                onClick={() => {
+                  setContentType('authors')
+                  setViewMode('list')
+                  setSearchTerm('')
+                  setFilter('all')
+                }}
+                className={`py-3 px-1 border-b-2 font-serif font-semibold text-lg transition-all duration-300 ${
+                  contentType === 'authors'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-foreground/60 hover:text-foreground hover:border-amber-600/50'
+                }`}
+              >
+                Authors
+              </button>
             </nav>
           </div>
         </div>
 
-        {/* List View */}
-        {viewMode === 'list' && (
+        {/* Categories/Testmonials managers */}
+        {viewMode === 'list' && contentType === 'categories' && (
+          <AdminCategoriesManager />
+        )}
+        {viewMode === 'list' && contentType === 'testimonials' && (
+          <AdminTestimonialsManager />
+        )}
+        {viewMode === 'list' && contentType === 'authors' && (
+          <AdminAuthorsManager />
+        )}
+
+        {/* List View for Blog/Projects */}
+        {viewMode === 'list' && (contentType === 'blog' || contentType === 'project') && (
           <>
             {/* Search and Filter Bar */}
             <div className="mb-8 flex flex-col sm:flex-row gap-6">
@@ -876,6 +958,25 @@ export default function AdminDashboard() {
                       <option value="">No category</option>
                       {categories.map((cat) => (
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Author (Blog only) */}
+                {contentType === 'blog' && (
+                  <div>
+                    <label className="block text-lg font-medium text-foreground mb-3">
+                      Author
+                    </label>
+                    <select
+                      value={newBlogPost.author_id ?? ''}
+                      onChange={(e) => setNewBlogPost({ ...newBlogPost, author_id: e.target.value || null })}
+                      className="w-full h-14 text-lg px-4 border border-border/20 rounded-md bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                    >
+                      <option value="">No author</option>
+                      {authors.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name} ({a.email})</option>
                       ))}
                     </select>
                   </div>

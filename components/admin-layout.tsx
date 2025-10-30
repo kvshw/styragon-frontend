@@ -7,7 +7,8 @@ import AdminLogin from './admin-login'
 import AdminDashboard from './admin-dashboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LogOut, User } from 'lucide-react'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { LogOut, User, Pencil } from 'lucide-react'
 
 export default function AdminLayout() {
   const { user, loading, signOut } = useAdminAuth()
@@ -17,6 +18,17 @@ export default function AdminLayout() {
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError, setResetError] = useState('')
   const [resetMessage, setResetMessage] = useState('')
+  const [adminName, setAdminName] = useState<string>('')
+  const [editingName, setEditingName] = useState(false)
+  const [nameSaving, setNameSaving] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [pass1, setPass1] = useState('')
+  const [pass2, setPass2] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileMessage, setProfileMessage] = useState('')
 
   useEffect(() => {
     const checkHash = () => {
@@ -68,6 +80,87 @@ export default function AdminLayout() {
     }
   }
 
+  useEffect(() => {
+    const loadAdminProfile = async () => {
+      if (!user?.email) return
+      const { data } = await supabase
+        .from('admin_users')
+        .select('full_name, avatar_url')
+        .eq('email', user.email)
+        .maybeSingle()
+      setAdminName(data?.full_name || '')
+      setAvatarUrl(data?.avatar_url || '')
+    }
+    loadAdminProfile()
+  }, [user?.email])
+
+  const saveAdminName = async () => {
+    if (!user?.email) return
+    setNameSaving(true)
+    await supabase
+      .from('admin_users')
+      .update({ full_name: adminName || null, updated_at: new Date().toISOString() })
+      .eq('email', user.email)
+    setNameSaving(false)
+    setEditingName(false)
+  }
+
+  const uploadAvatar = async (file: File): Promise<string | null> => {
+    try {
+      const ext = file.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const path = `admin-avatars/${fileName}`
+      const { error } = await supabase.storage.from('images').upload(path, file)
+      if (error) throw error
+      const { data } = supabase.storage.from('images').getPublicUrl(path)
+      return data.publicUrl
+    } catch (e) {
+      return null
+    }
+  }
+
+  const saveProfile = async () => {
+    if (!user?.email) return
+    setProfileError('')
+    setProfileMessage('')
+    setProfileSaving(true)
+    try {
+      let newAvatarUrl = avatarUrl
+      if (avatarFile) {
+        const uploaded = await uploadAvatar(avatarFile)
+        if (uploaded) newAvatarUrl = uploaded
+      }
+
+      await supabase
+        .from('admin_users')
+        .update({ full_name: adminName || null, avatar_url: newAvatarUrl || null, updated_at: new Date().toISOString() })
+        .eq('email', user.email)
+
+      if (pass1 || pass2) {
+        if (pass1 !== pass2) {
+          setProfileError('Passwords do not match')
+          setProfileSaving(false)
+          return
+        }
+        if (pass1.length < 8) {
+          setProfileError('Password must be at least 8 characters')
+          setProfileSaving(false)
+          return
+        }
+        const { error } = await supabase.auth.updateUser({ password: pass1 })
+        if (error) throw error
+      }
+
+      setAvatarFile(null)
+      setProfileMessage('Profile updated successfully')
+      setProfileOpen(false)
+    } catch (e: any) {
+      setProfileError(e?.message || 'Failed to update profile')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -113,7 +206,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background admin-scope">
       {/* Admin Header */}
       <div className="border-b border-border/20 bg-card/30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,9 +216,33 @@ export default function AdminLayout() {
                 Admin Dashboard
               </h1>
               <div className="h-6 w-px bg-border/20"></div>
-              <div className="flex items-center gap-2 text-sm text-foreground/60">
+              <div className="flex items-center gap-3 text-sm text-foreground/70">
                 <User className="h-4 w-4" />
-                {user.email}
+                {editingName ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      placeholder="Your name"
+                      className="h-8 w-48"
+                    />
+                    <Button size="sm" onClick={saveAdminName} disabled={nameSaving} className="h-8 px-3 bg-amber-600 hover:bg-amber-700">
+                      {nameSaving ? 'Saving…' : 'Save'}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingName(false)} className="h-8 px-3">Cancel</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{adminName || user.email}</span>
+                    <button
+                      className="text-foreground/50 hover:text-amber-600"
+                      title="Edit display name"
+                      onClick={() => setEditingName(true)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -136,6 +253,48 @@ export default function AdminLayout() {
               >
                 View Site
               </a>
+              <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-border/20">Profile</Button>
+                </DialogTrigger>
+                <DialogContent className="admin-dialog max-w-lg bg-card text-foreground border border-border/30 shadow-2xl rounded-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Admin Profile</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-2">
+                    <div>
+                      <label className="block text-sm mb-2">Display name</label>
+                      <Input value={adminName} onChange={(e) => setAdminName(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-2">Avatar URL</label>
+                      <Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-2">Upload new avatar</label>
+                      <Input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm mb-2">New password</label>
+                        <Input type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">Confirm password</label>
+                        <Input type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                      </div>
+                    </div>
+                    {profileError && <div className="p-3 text-sm text-red-600 bg-red-600/10 border border-red-600/20 rounded">{profileError}</div>}
+                    {profileMessage && <div className="p-3 text-sm text-green-600 bg-green-600/10 border border-green-600/20 rounded">{profileMessage}</div>}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setProfileOpen(false)}>Cancel</Button>
+                    <Button onClick={saveProfile} disabled={profileSaving} className="bg-amber-600 hover:bg-amber-700">
+                      {profileSaving ? 'Saving…' : 'Save changes'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               <Button
                 onClick={signOut}
                 variant="outline"

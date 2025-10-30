@@ -98,6 +98,42 @@ html {
   }
 }
 
+/* Dashboard-wide golden input borders for visibility */
+.admin-scope input,
+.admin-scope textarea,
+.admin-scope select,
+.admin-scope .shadcn-input,
+.admin-scope [role="textbox"] {
+  border-color: rgb(245 158 11 / 0.6) !important; /* amber-600 */
+  border-width: 1px !important;
+}
+
+.admin-scope input:focus,
+.admin-scope textarea:focus,
+.admin-scope select:focus,
+.admin-scope .shadcn-input:focus,
+.admin-scope [role="textbox"]:focus {
+  border-color: rgb(245 158 11 / 0.9) !important;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.2);
+}
+
+/* Ensure dialog (portal) inputs also get golden borders */
+.admin-dialog input,
+.admin-dialog textarea,
+.admin-dialog select,
+.admin-dialog [role="textbox"] {
+  border-color: rgb(245 158 11 / 0.7) !important;
+  border-width: 1px !important;
+}
+
+.admin-dialog input:focus,
+.admin-dialog textarea:focus,
+.admin-dialog select:focus,
+.admin-dialog [role="textbox"]:focus {
+  border-color: rgb(245 158 11 / 0.95) !important;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.25) !important;
+}
+
 /* Luxury Animations */
 @keyframes fade-in-up {
   from {
