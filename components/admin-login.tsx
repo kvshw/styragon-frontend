@@ -80,7 +80,7 @@ export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
                   type="email"
                   value={form.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="admin@styragon.com"
+                  placeholder="Enter your email"
                   className="h-14 pl-12 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
                   required
                 />
