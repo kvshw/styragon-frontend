@@ -17,19 +17,12 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
+    // Prefer onAuthStateChange which emits INITIAL_SESSION once on mount.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        // Events: INITIAL_SESSION | SIGNED_IN | SIGNED_OUT | USER_UPDATED | PASSWORD_RECOVERY | TOKEN_REFRESHED
         setUser(session?.user ?? null)
+        // Stop showing loader after the first event
         setLoading(false)
       }
     )

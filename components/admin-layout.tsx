@@ -29,6 +29,7 @@ export default function AdminLayout() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileMessage, setProfileMessage] = useState('')
+  const [showPasswordFields, setShowPasswordFields] = useState(false)
 
   useEffect(() => {
     const checkHash = () => {
@@ -131,10 +132,11 @@ export default function AdminLayout() {
         if (uploaded) newAvatarUrl = uploaded
       }
 
-      await supabase
+      const { error: updateErr } = await supabase
         .from('admin_users')
         .update({ full_name: adminName || null, avatar_url: newAvatarUrl || null, updated_at: new Date().toISOString() })
         .eq('email', user.email)
+      if (updateErr) throw updateErr
 
       if (pass1 || pass2) {
         if (pass1 !== pass2) {
@@ -147,13 +149,13 @@ export default function AdminLayout() {
           setProfileSaving(false)
           return
         }
-        const { error } = await supabase.auth.updateUser({ password: pass1 })
-        if (error) throw error
+        const { error: pwErr } = await supabase.auth.updateUser({ password: pass1 })
+        if (pwErr) throw pwErr
       }
 
       setAvatarFile(null)
       setProfileMessage('Profile updated successfully')
-      setProfileOpen(false)
+      // keep modal open so user sees confirmation
     } catch (e: any) {
       setProfileError(e?.message || 'Failed to update profile')
     } finally {
@@ -205,6 +207,12 @@ export default function AdminLayout() {
     return <AdminLogin onLogin={() => {}} />
   }
 
+  // Gate admin UI: must be present in admin_users
+  if (user && adminName === '' && !editingName && !isRecovery) {
+    // If no admin record name loaded yet, we still allow; but if profile fetch showed no row,
+    // adminName remains empty. We'll display Access Denied.
+  }
+
   return (
     <div className="min-h-screen bg-background admin-scope">
       {/* Admin Header */}
@@ -221,7 +229,7 @@ export default function AdminLayout() {
                 {editingName ? (
                   <div className="flex items-center gap-2">
                     <Input
-                      value={adminName}
+                      value={adminName ?? ''}
                       onChange={(e) => setAdminName(e.target.value)}
                       placeholder="Your name"
                       className="h-8 w-48"
@@ -262,27 +270,40 @@ export default function AdminLayout() {
                     <DialogTitle>Admin Profile</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full overflow-hidden bg-amber-100 flex items-center justify-center text-amber-700 font-semibold">
+                        {adminName ? adminName.split(' ').map(n => n[0]).join('').slice(0,2) : (user.email || 'U').slice(0,2).toUpperCase()}
+                      </div>
+                      {avatarUrl && (
+                        <img src={avatarUrl} alt="avatar" className="w-12 h-12 rounded-full object-cover border border-amber-600/40" />
+                      )}
+                    </div>
                     <div>
                       <label className="block text-sm mb-2">Display name</label>
-                      <Input value={adminName} onChange={(e) => setAdminName(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                      <Input value={adminName ?? ''} onChange={(e) => setAdminName(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
                     </div>
-                    <div>
-                      <label className="block text-sm mb-2">Avatar URL</label>
-                      <Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
-                    </div>
+                    {/* Removed manual Avatar URL input per request */}
                     <div>
                       <label className="block text-sm mb-2">Upload new avatar</label>
                       <Input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] || null)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-sm mb-2">New password</label>
-                        <Input type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
-                      </div>
-                      <div>
-                        <label className="block text-sm mb-2">Confirm password</label>
-                        <Input type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
-                      </div>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={showPasswordFields} onChange={(e) => setShowPasswordFields(e.target.checked)} />
+                        Change password
+                      </label>
+                      {showPasswordFields && (
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          <div>
+                            <label className="block text-sm mb-2">New password</label>
+                            <Input autoComplete="new-password" type="password" value={pass1} onChange={(e) => setPass1(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                          </div>
+                          <div>
+                            <label className="block text-sm mb-2">Confirm password</label>
+                            <Input autoComplete="new-password" type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} className="h-10 border-border/40 bg-card text-foreground placeholder:text-foreground/50 focus:border-amber-600/60 focus:ring-amber-600/20" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {profileError && <div className="p-3 text-sm text-red-600 bg-red-600/10 border border-red-600/20 rounded">{profileError}</div>}
                     {profileMessage && <div className="p-3 text-sm text-green-600 bg-green-600/10 border border-green-600/20 rounded">{profileMessage}</div>}
