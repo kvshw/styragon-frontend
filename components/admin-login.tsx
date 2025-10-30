@@ -20,6 +20,11 @@ export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [forgotMode, setForgotMode] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
+  const [resetError, setResetError] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,6 +57,47 @@ export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
     if (error) setError('')
   }
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetLoading(true)
+    setResetMessage('')
+    setResetError('')
+
+    try {
+      // Only send reset if the email exists in admin_users
+      const { data: adminRow, error: adminErr } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', resetEmail)
+        .maybeSingle()
+
+      if (adminErr) {
+        setResetError('Unable to verify email. Please try again later.')
+        return
+      }
+
+      if (!adminRow) {
+        setResetError('Email not found in admin users')
+        return
+      }
+
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/admin` : undefined,
+      })
+
+      if (resetErr) {
+        setResetError(resetErr.message)
+        return
+      }
+
+      setResetMessage('Password reset email sent. Please check your inbox.')
+    } catch (err) {
+      setResetError('An unexpected error occurred')
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -68,7 +114,58 @@ export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
         {/* Login Form */}
         <Card className="p-8 border-border/20 bg-card/50 backdrop-blur-sm">
-          <form onSubmit={handleLogin} className="space-y-6">
+          {forgotMode ? (
+            <form onSubmit={handlePasswordReset} className="space-y-6">
+              {/* Reset Email Field */}
+              <div>
+                <label className="block text-lg font-medium text-foreground mb-3">
+                  Admin Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-foreground/40 h-5 w-5" />
+                  <Input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => { setResetEmail(e.target.value); if (resetError) setResetError(''); if (resetMessage) setResetMessage('') }}
+                    placeholder="Enter your admin email"
+                    className="h-14 pl-12 text-lg border-border/20 bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Reset Messages */}
+              {resetError && (
+                <div className="p-4 bg-red-600/10 border border-red-600/20 rounded-md">
+                  <p className="text-red-600 text-base font-medium">{resetError}</p>
+                </div>
+              )}
+              {resetMessage && (
+                <div className="p-4 bg-green-600/10 border border-green-600/20 rounded-md">
+                  <p className="text-green-600 text-base font-medium">{resetMessage}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => { setForgotMode(false); setResetEmail(''); setResetError(''); setResetMessage('') }}
+                  className="h-14 px-6 text-lg border-border/20"
+                >
+                  Back to Login
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="flex-1 h-14 bg-amber-600 hover:bg-amber-700 text-white text-lg font-medium"
+                >
+                  {resetLoading ? 'Sending…' : 'Send Reset Link'}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-6">
             {/* Email Field */}
             <div>
               <label className="block text-lg font-medium text-foreground mb-3">
@@ -137,7 +234,17 @@ export default function AdminLogin({ onLogin }: { onLogin: () => void }) {
                 </>
               )}
             </Button>
-          </form>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setForgotMode(true)}
+                  className="mt-2 text-sm text-amber-600 hover:text-amber-700"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </form>
+          )}
 
           {/* Footer */}
           <div className="mt-8 pt-6 border-t border-border/20">
