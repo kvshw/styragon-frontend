@@ -131,9 +131,12 @@ export function Hero() {
           <Button
             size="lg"
             className="bg-amber-600 text-amber-50 hover:bg-amber-700 group px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-serif font-semibold shadow-lg shadow-amber-600/25 hover:shadow-amber-600/40 hover:scale-105 transition-all duration-300"
+            asChild
           >
-            Start Your Project
-            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+            <a href="/start-project">
+              Start Your Project
+              <ArrowRight className="ml-2 h-5 w-5 inline group-hover:translate-x-1 transition-transform duration-300" />
+            </a>
           </Button>
           <Button
             size="lg"

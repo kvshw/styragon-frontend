@@ -38,6 +38,7 @@ import {
 import AdminCategoriesManager from './admin-categories'
 import AdminTestimonialsManager from './admin-testimonials'
 import AdminAuthorsManager from './admin-authors'
+import AdminLeads from './admin-leads'
 
 interface BlogPost {
   id: string
@@ -88,7 +89,7 @@ interface NewProject {
 }
 
 type ViewMode = 'list' | 'create' | 'edit'
-type ContentType = 'blog' | 'project' | 'categories' | 'testimonials' | 'authors'
+type ContentType = 'blog' | 'project' | 'categories' | 'testimonials' | 'authors' | 'leads'
 
 interface Category {
   id: string
@@ -683,6 +684,21 @@ export default function AdminDashboard() {
               >
                 Authors
               </button>
+              <button
+                onClick={() => {
+                  setContentType('leads')
+                  setViewMode('list')
+                  setSearchTerm('')
+                  setFilter('all')
+                }}
+                className={`py-3 px-1 border-b-2 font-serif font-semibold text-lg transition-all duration-300 ${
+                  contentType === 'leads'
+                    ? 'border-amber-600 text-amber-600'
+                    : 'border-transparent text-foreground/60 hover:text-foreground hover:border-amber-600/50'
+                }`}
+              >
+                Leads
+              </button>
             </nav>
           </div>
         </div>
@@ -696,6 +712,9 @@ export default function AdminDashboard() {
         )}
         {viewMode === 'list' && contentType === 'authors' && (
           <AdminAuthorsManager />
+        )}
+        {viewMode === 'list' && contentType === 'leads' && (
+          <AdminLeads />
         )}
 
         {/* List View for Blog/Projects */}

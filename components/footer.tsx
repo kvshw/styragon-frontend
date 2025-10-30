@@ -78,23 +78,23 @@ export function Footer() {
             <h4 className="text-sm tracking-widest text-foreground font-serif font-semibold hover:text-amber-600 transition-colors duration-300">CONNECT</h4>
             <ul className="space-y-2 text-base text-muted-foreground">
               <li>
-                <a href="#" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
+                <a href="https://www.linkedin.com/company/styragon/" target="_blank" rel="noopener noreferrer" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
                   LinkedIn
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
-                  Twitter
+                <a href="https://www.facebook.com/styragon" target="_blank" rel="noopener noreferrer" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
+                  Facebook
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
+                <a href="https://www.instagram.com/styragon/" target="_blank" rel="noopener noreferrer" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
                   Instagram
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block">
-                  Dribbble
+                <a href="#" aria-disabled className="hover:text-amber-600 transition-all duration-300 hover:translate-x-1 block opacity-60 cursor-not-allowed">
+                  TikTok (coming soon)
                 </a>
               </li>
             </ul>
