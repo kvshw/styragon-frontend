@@ -35,6 +35,7 @@ interface BlogPost {
   featured_image_url: string | null
   published: boolean
   featured: boolean
+  category_id?: string | null
   created_at: string
   updated_at?: string
 }
@@ -59,6 +60,7 @@ interface NewBlogPost {
   featured_image_url: File | null
   published: boolean
   featured: boolean
+  category_id: string | null
 }
 
 interface NewProject {
@@ -73,12 +75,19 @@ interface NewProject {
 type ViewMode = 'list' | 'create' | 'edit'
 type ContentType = 'blog' | 'project'
 
+interface Category {
+  id: string
+  name: string
+  slug: string
+}
+
 export default function AdminDashboard() {
   // State management
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
   
   // UI state
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -95,7 +104,8 @@ export default function AdminDashboard() {
     content: '',
     featured_image_url: null,
     published: false,
-    featured: false
+    featured: false,
+    category_id: null
   })
   
   const [newProject, setNewProject] = useState<NewProject>({
@@ -116,7 +126,7 @@ export default function AdminDashboard() {
       // Fetch blog posts
       const { data: blogData, error: blogError } = await supabase
         .from('blog_posts')
-        .select('id, title, slug, excerpt, content, featured_image_url, published, featured, created_at, updated_at')
+        .select('id, title, slug, excerpt, content, featured_image_url, published, featured, category_id, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (blogError) throw blogError
@@ -129,8 +139,17 @@ export default function AdminDashboard() {
 
       if (projectError) throw projectError
 
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .order('name', { ascending: true })
+
+      if (categoriesError) throw categoriesError
+
       setBlogPosts(blogData || [])
       setProjects(projectData || [])
+      setCategories(categoriesData || [])
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -188,7 +207,8 @@ export default function AdminDashboard() {
         content: newBlogPost.content,
         featured_image_url: imageUrl,
         published: newBlogPost.published,
-        featured: newBlogPost.featured
+        featured: newBlogPost.featured,
+        category_id: newBlogPost.category_id
       } : {
         title: newProject.title,
         slug: newProject.slug,
@@ -213,7 +233,8 @@ export default function AdminDashboard() {
           content: '',
           featured_image_url: null,
           published: false,
-          featured: false
+          featured: false,
+          category_id: null
         })
       } else {
         setNewProject({
@@ -265,7 +286,8 @@ export default function AdminDashboard() {
         content: newBlogPost.content,
         featured_image_url: imageUrl,
         published: newBlogPost.published,
-        featured: newBlogPost.featured
+        featured: newBlogPost.featured,
+        category_id: newBlogPost.category_id
       } : {
         title: newProject.title,
         slug: newProject.slug,
@@ -355,7 +377,8 @@ export default function AdminDashboard() {
         content: blogItem.content,
         featured_image_url: null,
         published: blogItem.published,
-        featured: blogItem.featured
+        featured: blogItem.featured,
+        category_id: blogItem.category_id ?? null
       })
     } else {
       const projectItem = item as Project
@@ -380,7 +403,8 @@ export default function AdminDashboard() {
         content: '',
         featured_image_url: null,
         published: false,
-        featured: false
+        featured: false,
+        category_id: null
       })
     } else {
       setNewProject({
@@ -800,6 +824,25 @@ export default function AdminDashboard() {
                     required
                   />
                 </div>
+
+                {/* Category (Blog only) */}
+                {contentType === 'blog' && (
+                  <div>
+                    <label className="block text-lg font-medium text-foreground mb-3">
+                      Category
+                    </label>
+                    <select
+                      value={newBlogPost.category_id ?? ''}
+                      onChange={(e) => setNewBlogPost({ ...newBlogPost, category_id: e.target.value || null })}
+                      className="w-full h-14 text-lg px-4 border border-border/20 rounded-md bg-background/50 focus:border-amber-600/50 focus:ring-amber-600/20"
+                    >
+                      <option value="">No category</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Content (Blog only) */}
                 {contentType === 'blog' && (

@@ -14,15 +14,15 @@ export function Philosophy() {
               </h2>
             </div>
             <div className="space-y-6 text-foreground/75 leading-relaxed text-base animate-fade-in-up delay-500">
-              <p className="hover:text-foreground transition-colors duration-300 group">
+              <p className="hover:text-foreground transition-colors duration-300 group text-xl">
                 We believe exceptional digital products are born from the intersection of meticulous craft, strategic
                 thinking, and unwavering attention to detail.
               </p>
-              <p className="hover:text-foreground transition-colors duration-300 group">
+              <p className="hover:text-foreground transition-colors duration-300 group text-xl">
                 Every project we undertake is an opportunity to push boundaries, challenge conventions, and create
                 experiences that resonate deeply with users while driving measurable business outcomes.
               </p>
-              <p className="hover:text-foreground transition-colors duration-300 group">
+              <p className="hover:text-foreground transition-colors duration-300 group text-xl">
                 Our approach combines technical excellence with design sophistication, ensuring your digital presence
                 not only functions flawlessly but captivates and converts.
               </p>

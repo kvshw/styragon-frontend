@@ -82,7 +82,7 @@ export function Process() {
                     <h3 className="text-xl md:text-2xl font-serif font-semibold text-amber-50 group-hover:text-yellow-100 transition-colors duration-500 group-hover:drop-shadow-lg">
                       {step.title}
                     </h3>
-                    <p className="text-sm md:text-base text-amber-100/80 leading-relaxed group-hover:text-amber-50 transition-colors duration-500">
+                    <p className="text-sm md:text-base text-amber-100/80 leading-relaxed group-hover:text-amber-50 transition-colors duration-500 text-2xl">
                       {step.description}
                     </p>
                   </div>

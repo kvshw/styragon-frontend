@@ -105,13 +105,15 @@ class SupabaseApiClient {
     page?: number
   }): Promise<{ results: BlogPost[]; count: number; next?: string; previous?: string }> {
     try {
+      // Use inner join on categories only when filtering by category name,
+      // so we can filter on the related table field reliably.
+      const selectForCategory = params?.category
+        ? `*, author:authors(*), category:categories!inner(*)`
+        : `*, author:authors(*), category:categories(*)`
+
       let query = supabase
         .from('blog_posts')
-        .select(`
-          *,
-          author:authors(*),
-          category:categories(*)
-        `)
+        .select(selectForCategory)
 
       if (params?.published !== undefined) {
         query = query.eq('published', params.published)
@@ -123,7 +125,11 @@ class SupabaseApiClient {
         query = query.or(`title.ilike.%${params.search}%,content.ilike.%${params.search}%`)
       }
       if (params?.category) {
-        query = query.eq('category.slug', params.category)
+        // Accept either category name or slug from the UI
+        // Use OR across related fields. Requires inner join above.
+        query = query.or(
+          `category.name.eq.${params.category},category.slug.eq.${params.category}`
+        )
       }
 
       const { data, error } = await query.order('created_at', { ascending: false })
