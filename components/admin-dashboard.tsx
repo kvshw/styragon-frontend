@@ -7,6 +7,16 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { 
   Plus, 
   Edit, 
@@ -108,6 +118,7 @@ export default function AdminDashboard() {
   const [editingItem, setEditingItem] = useState<BlogPost | Project | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState<'all' | 'published' | 'draft' | 'featured'>('all')
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
   
   // Form state
   const [newBlogPost, setNewBlogPost] = useState<NewBlogPost>({
@@ -372,18 +383,13 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return
-    
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetId) return
     try {
       const table = contentType === 'blog' ? 'blog_posts' : 'projects'
-      const { error } = await supabase
-        .from(table)
-        .delete()
-        .eq('id', id)
-
+      const { error } = await supabase.from(table).delete().eq('id', deleteTargetId)
       if (error) throw error
-
+      setDeleteTargetId(null)
       fetchData()
     } catch (error) {
       console.error('Error deleting item:', error)
@@ -587,14 +593,6 @@ export default function AdminDashboard() {
               <p className="text-lg sm:text-xl text-foreground/70 font-light">Manage your luxury content with precision</p>
             </div>
             <div className="flex items-center gap-4">
-              <a
-                href="https://supabase.com/dashboard"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 border border-amber-600/30 text-base font-medium rounded-md text-amber-600 bg-amber-600/10 hover:bg-amber-600/20 hover:border-amber-600/50 transition-all duration-300"
-              >
-                Open Supabase Dashboard
-              </a>
               <Button
                 onClick={fetchData}
                 variant="outline"
@@ -820,7 +818,7 @@ export default function AdminDashboard() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => setDeleteTargetId(item.id)}
                         className="h-10 px-3 text-red-600 hover:text-red-700 border-border/20 hover:border-red-600/50 hover:bg-red-600/10 transition-all duration-300"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -1088,6 +1086,24 @@ export default function AdminDashboard() {
             </Card>
           </div>
         )}
+
+        {/* Delete confirmation modal */}
+        <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null) }}>
+          <AlertDialogContent className="admin-dialog">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this item?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. The item will be permanently removed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={handleDeleteConfirm}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )
